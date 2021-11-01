@@ -247,6 +247,10 @@ def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
     # print(user_dn_chunk)
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
     result = ldap_conn.modify(group_dn,{"member":[(ldap3.MODIFY_ADD, user_dn_list)]})
+    if args.rebind:
+      logger.perf("rebinding LDAP connection")
+      ldap_conn.unbind()
+      ldap_conn.bind()
     logger.debug("LDAP Modify result: {}".format(result))
     if args.delay>0:
       logger.perf("Sleeping {} seconds".format(args.delay))
@@ -277,6 +281,8 @@ parser.add_argument('-r', dest='reuse_template', type=str,
                     help="Reuse existing users for group add using given user naming template")                    
 parser.add_argument('-D', dest='delay',type=int, default=0,
                     help="Delay N seconds between chunks")                    
+parser.add_argument('--rebind', dest='rebind',default=False,action='store_true',
+                    help="Perform a unmind/bind operation between ldap operations.")
 
 args=parser.parse_args()
 
