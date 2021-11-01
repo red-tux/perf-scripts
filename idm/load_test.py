@@ -258,7 +258,6 @@ def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
       ldap_conn.unbind()
       ldap_conn.bind()
     logger.debug("LDAP Modify result: {}".format(result))
-    pp.pprint(user_dn_chunk)
 
     if args.delay>0:
       logger.perf("Sleeping {} seconds".format(args.delay))
