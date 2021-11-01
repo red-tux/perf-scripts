@@ -201,7 +201,8 @@ def get_users_ldap(template):
       total += 1
       if total % 10000 == 0:
         logger.perf("Loaded {} users".format(total))
-      users.append(entry['dn'])
+      # extract user uid.  For some reason uid is a list, we only need the first
+      users.append(entry['attributes']['uid'][0])
       if args.user_limit>-1 and total >= args.user_limit:
         break
 
@@ -248,12 +249,14 @@ def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
   for user_dn_chunk in chunker(user_dn_list,chunk):
     # print(user_dn_chunk)
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
-    result = ldap_conn.modify(group_dn,{"member":[(ldap3.MODIFY_ADD, user_dn_list)]})
+    logger.debug(user_dn_chunk)
+    result = ldap_conn.modify(group_dn,{"member":[(ldap3.MODIFY_ADD, user_dn_chunk)]})
     if args.rebind:
       logger.perf("rebinding LDAP connection")
       ldap_conn.unbind()
       ldap_conn.bind()
     logger.debug("LDAP Modify result: {}".format(result))
+    pp.pprint(user_dn_chunk)
     if args.delay>0:
       logger.perf("Sleeping {} seconds".format(args.delay))
       time.sleep(args.delay)
@@ -306,7 +309,7 @@ if args.verbosity:
   if level!=30:
     log_file = "log_{}".format(randomizer)
     _file_handler = logging.FileHandler(log_file)
-    _file_formatter = logging.Formatter('%(asctime) %(levelname)-8s :: %(message)s')
+    _file_formatter = logging.Formatter('%(asctime)s %(levelname)s :: %(message)s')
     _file_handler.setFormatter(_file_formatter)
     _file_handler.addFilter(LogFilter(level))
     logger.addHandler(_file_handler)
@@ -324,7 +327,8 @@ client.login(args.user, args.password)
 
 if args.reuse_template:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
-  base_user_dn = re.sub("^uid={}".format(args.user),'uid={}',user_dn)
+  base_user_dn = re.sub("^uid={},".format(args.user),'',user_dn)
+  logger.debug("base_user_dn: {}".format(base_user_dn))
   ldap_server = ldap3.Server(args.server, get_info=ldap3.ALL)
   ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True)
   users=get_users_ldap(args.reuse_template)
