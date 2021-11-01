@@ -202,7 +202,7 @@ def get_users_ldap(template):
       if total % 10000 == 0:
         logger.perf("Loaded {} users".format(total))
       users.append(entry['dn'])
-      if args.limit>-1 and total >= args.limit:
+      if args.user_limit>-1 and total >= args.user_limit:
         break
 
     logger.perf("Loaded {} users".format(len(users)))
