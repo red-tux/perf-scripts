@@ -248,6 +248,7 @@ def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
   for user_dn_chunk in chunker(user_dn_list,chunk):
     # print(user_dn_chunk)
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
+    logger.debug(user_dn_chunk)
     result = ldap_conn.modify(group_dn,{"member":[(ldap3.MODIFY_ADD, user_dn_list)]})
     logger.debug(result)
     if args.rebind:
