@@ -306,7 +306,7 @@ if args.verbosity:
   if level!=30:
     log_file = "log_{}".format(randomizer)
     _file_handler = logging.FileHandler(log_file)
-    _file_formatter = logging.Formatter('%(asctime) (%(levelname)-8s) :: %(message)s')
+    _file_formatter = logging.Formatter('%(asctime) [%(levelname)-8s] :: %(message)s')
     _file_handler.setFormatter(_file_formatter)
     _file_handler.addFilter(LogFilter(level))
     logger.addHandler(_file_handler)
