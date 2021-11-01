@@ -202,6 +202,8 @@ def get_users_ldap(template):
       if total % 10000 == 0:
         logger.perf("Loaded {} users".format(total))
       users.append(entry['dn'])
+      if args.limit>-1 and total >= args.limit:
+        break
 
     logger.perf("Loaded {} users".format(len(users)))
   else:
@@ -283,6 +285,8 @@ parser.add_argument('-D', dest='delay',type=int, default=0,
                     help="Delay N seconds between chunks")                    
 parser.add_argument('--rebind', dest='rebind',default=False,action='store_true',
                     help="Perform a unmind/bind operation between ldap operations.")
+parser.add_argument('-l', dest='user_limit', type=int, default=-1,
+                    help="Limit the number of users returned by reuse")
 
 args=parser.parse_args()
 
