@@ -1,3 +1,4 @@
 .vscode
 perf_*
 log_*
+venv*
