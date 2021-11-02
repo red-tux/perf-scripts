@@ -230,6 +230,7 @@ def create_group_add_users_api(i,users):
   logger.info("Done")
   logger.debug(result)
 
+
 def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
   group_name = "group{}_{}".format(randomizer,i)
   group_desc = "Test group vor load_test.py.  Run started at: {}".format(start_timestr)
@@ -240,9 +241,26 @@ def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
 
   logger.debug(result)
 
+  mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap3.MODIFY_ADD, chunk)
+
+
+def remove_group_users_ldap(users, ldap_conn, base_user_dn, group_name, group_dn, chunk=-1):
+  logger.info("Group to delete: {}".format(group_dn))
+  start = time.time()
+  mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap3.MODIFY_DELETE, chunk)
+  logger.perf("Removing users from group took: {:4.3f}".format(time.time() - start))
+  result = client.group_show(group_name)
+  logger.info("Group show: {}".format(result))
+  logger.info("Delete group from IDM: {}".format(group_dn))
+  start = time.time()
+  result = client.group_del(group_name)
+  logger.perf("Delete group using API took: {:4.3f}".format(time.time() - start))
+  logger.info("Group del resul: {}".format(result))
+
+
+def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, chunk=-1):
   if chunk==-1:
     chunk=len(users)
- 
 
   user_dn_list = [base_user_dn.format(user) for user in users]
 
@@ -251,7 +269,7 @@ def create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=-1):
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
     logger.debug(user_dn_chunk)
 
-    result = ldap_conn.modify(group_dn,{"member":[(ldap3.MODIFY_ADD, user_dn_chunk)]})
+    result = ldap_conn.modify(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
     logger.debug("LDAP Modify result: {}".format(result))
     if args.rebind:
       logger.perf("rebinding LDAP connection")
@@ -282,6 +300,8 @@ parser.add_argument('-P', dest='password', type=str,
                     help="Password for connection")
 parser.add_argument('--ldap-group', dest='ldap_group', default=False, action='store_true',
                     help="Add users to group using LDAP directly")
+parser.add_argument('--ldap-group-remove', dest='ldap_group_del', type=str,
+                    help="Remove users from group using LDAP directly")
 parser.add_argument('-C', dest='chunk', type=int, default=-1,
                     help="Chunk size for batching user adds to groups, -1 means all users given in count")
 parser.add_argument('-r', dest='reuse_template', type=str,
@@ -365,6 +385,14 @@ if args.ldap_group:
 
   for i in loop_timer(args.group_count,1,label="group_add_user_ldap"):
     create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=args.chunk)
+
+elif args.ldap_group_del is not None:
+  user_dn=client.user_show(args.user,o_all=True)['result']['dn']
+  group_dn=client.group_show(args.ldap_group_del,o_all=True)['result']['dn']
+  base_user_dn = re.sub("^uid={}".format(args.user),'uid={}',user_dn)
+  ldap_server = ldap3.Server(args.server, get_info=ldap3.ALL)
+  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True)
+  remove_group_users_ldap(users, ldap_conn, base_user_dn, args.ldap_group_del, group_dn, chunk=args.chunk)
 
 else:
   for i in loop_timer(args.group_count,1,label="group_add_user_api"):
