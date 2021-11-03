@@ -129,7 +129,7 @@ def chunker(iterable, size):
       return
     yield chunk
 
-def generate_user(seq_num, ldif_out=False):
+def generate_user(seq_num, ldif_out=False, dc_dn=None):
   #create a list/dict of user entries to use for passing to a function
   user = {}
   user["a_uid"] = uid_template.format(seq=seq_num)
@@ -138,15 +138,19 @@ def generate_user(seq_num, ldif_out=False):
   user["o_cn"] = "{} {}".format(user["o_givenname"], user["o_sn"])
   user["o_preferredlanguage"]='EN'
   user["o_employeetype"]="Created via load_test.py.  Run started at: {}".format(start_timestr)
-
+  
   # if the user is to be used for LDIF, strip the first two prepended chars
   if ldif_out:
     clean_rex = r"^._"
     keylist = list(user.keys())
+    user['attributes']={}
     for key in keylist:
       new_key = re.sub(clean_rex,'',key)
-      user[new_key]=user[key]
+      user['attributes'][new_key]=user[key]
       del user[key]
+    if dc_dn is not None:
+      user['dn']="uid={},cn=staged users,cn=accounts,cn=provisioning,{}".format(user['attributes']['uid'],dc_dn)
+    user['object_class']=['top','inetorgperson']
 
   return user
 
@@ -163,6 +167,32 @@ def add_users_api(total):
     else:
       user_out = client.user_add(**user)
     logger.debug(user_out)
+
+  return users
+
+def add_users_stage(total):
+  users=[]
+  if args.ldap_stage:
+    for i in loop_timer(args.count,args.count//10,label="user_add_stage_ldap"):
+      user = generate_user(i, ldif_out=True, dc_dn=dom_dn)
+      users.append(user['attributes']['uid'])
+      user_dn=user['dn']
+      del user['dn']
+      ldap_conn.add(user_dn,**user)
+
+  else:
+    for i in loop_timer(args.count,args.count//10,label="user_add_stage"):
+      user = generate_user(i)
+      users.append(user["a_uid"])
+      logger.debug(user)
+
+      user_out = client.stageuser_add(**user)
+      logger.debug(user_out)
+
+  for i in iter_timer(users,args.count//10,label="user_activate"):
+    activate_out = client.stageuser_activate(i)
+    logger.debug(activate_out)
+        
 
   return users
 
@@ -270,8 +300,6 @@ parser.add_argument('-v', dest='verbosity', action='count', default=0,
                     help="Increase Verbosity, default is errors only.  Only effective up to 3 levels.")
 parser.add_argument('-c', type=int, dest='count',
                     help="Total count of users to add")
-parser.add_argument('-s', dest='stage', action='store_true', default=False,
-                    help="Create user in stage not active")
 parser.add_argument('-g', dest='group_count', default=1, type=int,
                     help="Number of groups to create")
 parser.add_argument('-S', dest='server', type=str,
@@ -280,6 +308,10 @@ parser.add_argument('-U', dest='user', type=str,
                     help="User account to use for connect")
 parser.add_argument('-P', dest='password', type=str,
                     help="Password for connection")
+parser.add_argument('--stage', dest='stage', action='store_true', default=False,
+                    help="Create user in stage not active")
+parser.add_argument('--stage-ldap', dest='ldap_stage', default=False, action='store_true',
+                    help='Create stage users via ldap not API')
 parser.add_argument('--ldap-group', dest='ldap_group', default=False, action='store_true',
                     help="Add users to group using LDAP directly")
 parser.add_argument('-C', dest='chunk', type=int, default=-1,
@@ -327,6 +359,13 @@ if args.verbosity:
 client = ClientMeta(args.server,False)
 client.login(args.user, args.password)
 
+if args.ldap_group or args.ldap_stage:
+  user_dn=client.user_show(args.user,o_all=True)['result']['dn']
+  base_user_dn = re.sub("^uid={}".format(args.user),'uid={}',user_dn)
+  dom_dn = re.search("(dc=.*)",user_dn, re.IGNORECASE).group(1)
+  ldap_server = ldap3.Server(args.server, get_info=ldap3.ALL)
+  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True)
+
 if args.reuse_template:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
   base_user_dn = re.sub("^uid={},".format(args.user),'',user_dn)
@@ -351,13 +390,12 @@ else:
   logger.perf("User count: {}   Group count: {}".format(args.count,args.group_count))
   logger.perf("Server: {}   Chunk Size: {}".format(args.server,args.chunk))
 
-  users = add_users_api(args.count)
+  if args.stage:
+    users = add_users_stage(args.count)
+  else:
+    users = add_users_api(args.count)
 
 if args.ldap_group:
-  user_dn=client.user_show(args.user,o_all=True)['result']['dn']
-  base_user_dn = re.sub("^uid={}".format(args.user),'uid={}',user_dn)
-  ldap_server = ldap3.Server(args.server, get_info=ldap3.ALL)
-  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True)
   # print(ldap_server.info)
 
   # for i in iter_timer(range(args.group_count),step=1,label="group_add_user_ldap"):
