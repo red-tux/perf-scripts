@@ -31,6 +31,7 @@ import logging
 #from linetimer import CodeTimer
 import itertools
 import pprint
+import subprocess
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -381,8 +382,12 @@ if args.verbosity:
 #client.login_kerberos()
 # user = client.user_add('test4', 'John', 'Doe', 'John Doe', o_preferredlanguage='EN')
 
-client = ClientMeta(args.server,False)
-client.login(args.user, args.password)
+# Output some data to the user about the script options passed in
+try:
+  commit_info = str(subprocess.check_output(['git', 'log', '-n', '1', '--pretty=tformat:"%ci  %H"']),"utf-8").strip()
+  logger.perf("Commit Info: {}".format(commit_info))
+except FileNotFoundError:
+  logger.perf("No git info found")
 
 logger.perf("Start Time: {}".format(start_timestr))
 logger.perf("User count: {}   Group count: {}".format(args.count,args.group_count))
@@ -402,7 +407,7 @@ if args.ldap_group:
     logger.perf("  Using a chunk size of {}".format(args.chunk))
 else:
   logger.perf("Adding users to groups via API")
-  
+
 if args.reuse_template:
   logger.perf("Reusing users starting with: '{}'".format(args.reuse_template))
   if args.user_limit>-1:
@@ -410,6 +415,10 @@ if args.reuse_template:
 
 logger.debug(args)
 logger.perf('----')
+# end start header
+
+client = ClientMeta(args.server,False)
+client.login(args.user, args.password)
 
 if args.ldap_group or args.ldap_stage:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
