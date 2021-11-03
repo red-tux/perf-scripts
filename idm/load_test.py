@@ -46,6 +46,7 @@ from python_freeipa import ClientMeta
 # randomizer = int(time.time()) % 10000
 randomizer = datetime.now().strftime("%d%H%M")
 start_timestr = datetime.now().strftime("%Y%m%d %H:%M")
+start_time = time.time()
 uid_template = "tuser{}_{{seq}}".format(randomizer)
 
 pp=pprint.PrettyPrinter(indent=2)
@@ -84,11 +85,7 @@ _stout_handler = logging.StreamHandler()
 _stout_handler.setLevel(logging.INFO)
 logger.addHandler(_stout_handler)
 
-_perf_handler = logging.FileHandler("perf_{}".format(randomizer))
-_perf_formatter = logging.Formatter("%(asctime)s; %(message)s")
-_perf_handler.setFormatter(_perf_formatter)
-_perf_handler.addFilter(LogFilter(MyLogger._PERF,type='eq'))
-logger.addHandler(_perf_handler)
+
 
 def iter_timer(iterable, step=10, label=""):
   start = time.time()
@@ -347,6 +344,14 @@ parser.add_argument('-l', dest='user_limit', type=int, default=-1,
 
 args=parser.parse_args()
 
+# setting up logger here to prevent log files being generated when showing help
+
+perf_logfile = "perf_{}".format(randomizer)
+_perf_handler = logging.FileHandler(perf_logfile)
+_perf_formatter = logging.Formatter("%(asctime)s; %(message)s")
+_perf_handler.setFormatter(_perf_formatter)
+_perf_handler.addFilter(LogFilter(MyLogger._PERF,type='eq'))
+logger.addHandler(_perf_handler)
 
 if args.verbosity:
   # Error is a level of 40.  
@@ -379,6 +384,28 @@ if args.verbosity:
 client = ClientMeta(args.server,False)
 client.login(args.user, args.password)
 
+logger.perf("Start Time: {}".format(start_timestr))
+logger.perf("User count: {}   Group count: {}".format(args.count,args.group_count))
+logger.perf("Server: {}".format(args.server))
+logger.perf("Perf Log file: {}".format(perf_logfile))
+if args.stage:
+  if args.ldap_stage:
+    logger.perf("Creating Stage users via ldap")
+  else:
+    logger.perf("Creating Stage users via API")
+if args.ldap_group:
+  logger.perf("Adding users to groups via LDAP")
+  if args.chunk>-1:
+    logger.perf("  Using a chunk size of {}".format(args.chunk))
+else:
+  logger.perf("Adding users to groups via API")
+if args.reuse_template:
+  logger.perf("Reusing users starting with: '{}'".format(args.reuse_template))
+  if args.user_limit>-1:
+    logger.perf("  Limiting reuse to first {} users found".format(args.user_limit))
+    
+logger.debug(args)
+
 if args.ldap_group or args.ldap_stage:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
   base_user_dn = re.sub("^uid={}".format(args.user),'uid={}',user_dn)
@@ -405,10 +432,6 @@ else:
     exit(1)
   else:
     logger.info("Proceeding")
-
-  logger.perf("Start Time: {}".format(start_timestr))
-  logger.perf("User count: {}   Group count: {}".format(args.count,args.group_count))
-  logger.perf("Server: {}   Chunk Size: {}".format(args.server,args.chunk))
 
   if args.stage:
     users = add_users_stage(args.count)
@@ -437,3 +460,6 @@ else:
     create_group_add_users_api(i,users)
 
 logger.perf("End Time: {}".format(datetime.now().strftime("%Y%m%d %H:%M")))
+run_time=time.time() - start_time
+logger.perf("Total Run Time: {:.3f}sec".format(run_time))
+logger.perf("Total Run time: {:d}min {:.3f}sec".format(int(run_time//60),run_time%60))
