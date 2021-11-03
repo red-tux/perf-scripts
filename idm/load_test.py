@@ -393,18 +393,23 @@ if args.stage:
     logger.perf("Creating Stage users via ldap")
   else:
     logger.perf("Creating Stage users via API")
+else:
+  logger.perf("Creating active users via API")
+
 if args.ldap_group:
   logger.perf("Adding users to groups via LDAP")
   if args.chunk>-1:
     logger.perf("  Using a chunk size of {}".format(args.chunk))
 else:
   logger.perf("Adding users to groups via API")
+  
 if args.reuse_template:
   logger.perf("Reusing users starting with: '{}'".format(args.reuse_template))
   if args.user_limit>-1:
     logger.perf("  Limiting reuse to first {} users found".format(args.user_limit))
-    
+
 logger.debug(args)
+logger.perf('----')
 
 if args.ldap_group or args.ldap_stage:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
@@ -459,6 +464,7 @@ else:
   for i in loop_timer(args.group_count,1,label="group_add_user_api"):
     create_group_add_users_api(i,users)
 
+logger.perf('----')
 logger.perf("End Time: {}".format(datetime.now().strftime("%Y%m%d %H:%M")))
 run_time=time.time() - start_time
 logger.perf("Total Run Time: {:.3f}sec".format(run_time))
