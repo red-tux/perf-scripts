@@ -388,6 +388,7 @@ try:
   logger.perf("Commit Info: {}".format(commit_info))
 except FileNotFoundError:
   logger.perf("No git info found")
+  pass
 
 logger.perf("Start Time: {}".format(start_timestr))
 logger.perf("User count: {}   Group count: {}".format(args.count,args.group_count))
