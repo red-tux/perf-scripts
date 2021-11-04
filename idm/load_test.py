@@ -386,7 +386,7 @@ if args.verbosity:
 try:
   commit_info = str(subprocess.check_output(['git', 'log', '-n', '1', '--pretty=tformat:"%ci  %H"']),"utf-8").strip()
   logger.perf("Commit Info: {}".format(commit_info))
-except FileNotFoundError:
+except:
   logger.perf("No git info found")
   pass
 
