@@ -290,7 +290,7 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
   if chunk==-1:
     chunk=len(users)
 
-  user_dn_list = [base_user_dn.format(user) for user in users]
+  user_dn_list = ["uid={},{}".format(user,base_user_dn) for user in users]
 
   for user_dn_chunk in chunker(user_dn_list,chunk):
     # print(user_dn_chunk)
@@ -383,6 +383,7 @@ if args.verbosity:
 # user = client.user_add('test4', 'John', 'Doe', 'John Doe', o_preferredlanguage='EN')
 
 # Output some data to the user about the script options passed in
+# Not working as expected when git not found
 try:
   commit_info = str(subprocess.check_output(['git', 'log', '-n', '1', '--pretty=tformat:"%ci  %H"']),"utf-8").strip()
   logger.perf("Commit Info: {}".format(commit_info))
@@ -460,6 +461,7 @@ if args.ldap_group:
   #   create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=args.chunk)
 
   for i in loop_timer(args.group_count,1,label="group_add_user_ldap"):
+    base_user_dn=
     create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=args.chunk)
 
 elif args.ldap_group_del is not None:
