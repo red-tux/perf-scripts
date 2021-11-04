@@ -461,7 +461,6 @@ if args.ldap_group:
   #   create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=args.chunk)
 
   for i in loop_timer(args.group_count,1,label="group_add_user_ldap"):
-    base_user_dn=
     create_group_add_users_ldap(i,users,ldap_conn,base_user_dn,chunk=args.chunk)
 
 elif args.ldap_group_del is not None:
