@@ -314,6 +314,7 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
 
     # result = ldap_conn.modify(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
     result = ldap_modify_retry(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
+    logger.debug(ldap_conn.usage)
     logger.debug("LDAP Modify result: {}".format(result))
 
     if args.rebind:
