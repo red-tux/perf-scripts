@@ -285,6 +285,18 @@ def remove_group_users_ldap(users, ldap_conn, base_user_dn, group_name, group_dn
   logger.perf("Delete group using API took: {:4.3f}".format(time.time() - start))
   logger.info("Group del resul: {}".format(result))
 
+def ldap_modify_retry(*fargs, **kwargs):
+  for retry_num in range(args.max_retries+1):
+    try:
+      return(ldap_conn.modify(*fargs,**kwargs))
+    except Exception as e:
+      logger.perf("Exception Occured")
+      logger.perf("'{}'".format(e))
+      logger.perf("{} retries left".format(args.max_retries-retry_num))
+      ldap_conn.unbind()
+      ldap_conn.bind()
+      logger.info("LDAP Connection rebound")
+
 
 def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, chunk=-1):
   if chunk==-1:
@@ -294,16 +306,22 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
 
   for user_dn_chunk in chunker(user_dn_list,chunk):
     # print(user_dn_chunk)
+
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
     logger.debug(user_dn_chunk)
 
-    result = ldap_conn.modify(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
+    # result = ldap_conn.modify(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
+    result = ldap_modify_retry(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
     logger.debug("LDAP Modify result: {}".format(result))
+
     if args.rebind:
       logger.perf("rebinding LDAP connection")
       ldap_conn.unbind()
       ldap_conn.bind()
     logger.debug("LDAP Modify result: {}".format(result))
+      
+
+
 
     if args.delay>0:
       logger.perf("Sleeping {} seconds".format(args.delay))
@@ -342,6 +360,8 @@ parser.add_argument('--rebind', dest='rebind',default=False,action='store_true',
                     help="Perform a unmind/bind operation between ldap operations.")
 parser.add_argument('-l', dest='user_limit', type=int, default=-1,
                     help="Limit the number of users returned by reuse")
+parser.add_argument('--max-retries',dest='max_retries', type=int, default=0,
+                    help="Maximum number of retries for a failed chunk operation")
 
 args=parser.parse_args()
 
