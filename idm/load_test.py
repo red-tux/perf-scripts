@@ -127,6 +127,11 @@ def chunker(iterable, size):
       return
     yield chunk
 
+def dump_ldap_stats(reset=True):
+  logger.debug(ldap_conn.usage)
+  if reset:
+    ldap_conn.usage.reset()
+
 def generate_user(seq_num, ldif_out=False, dc_dn=None):
   #create a list/dict of user entries to use for passing to a function
   user = {}
@@ -229,12 +234,14 @@ def get_users_ldap(template):
       total += 1
       if total % 10000 == 0:
         logger.perf("Loaded {} users".format(total))
+        dump_ldap_stats()
       # extract user uid.  For some reason uid is a list, we only need the first
       users.append(entry['attributes']['uid'][0])
       if args.user_limit>-1 and total >= args.user_limit:
         break
 
     logger.perf("Loaded {} users".format(len(users)))
+    dump_ldap_stats()
   else:
     logger.perf("Unable to find user template")
     exit(1)
@@ -308,21 +315,17 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
     # print(user_dn_chunk)
 
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
-    logger.debug(user_dn_chunk)
+    logger.debug("Showing fist 20 of user_dn_chunk: ".format(user_dn_chunk[:20]))
 
     # result = ldap_conn.modify(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
     result = ldap_modify_retry(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
-    logger.debug(ldap_conn.usage)
+    dump_ldap_stats()
     logger.debug("LDAP Modify result: {}".format(result))
 
     if args.rebind:
       logger.perf("rebinding LDAP connection")
       ldap_conn.unbind()
       ldap_conn.bind()
-    logger.debug("LDAP Modify result: {}".format(result))
-      
-
-
 
     if args.delay>0:
       logger.perf("Sleeping {} seconds".format(args.delay))
@@ -448,14 +451,14 @@ if args.ldap_group or args.ldap_stage:
   base_user_dn = re.sub("^uid={}".format(args.user),'uid={}',user_dn)
   dom_dn = re.search("(dc=.*)",user_dn, re.IGNORECASE).group(1)
   ldap_server = ldap3.Server(args.server, get_info=ldap3.ALL)
-  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True)
+  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True, collect_usage=True)
 
 if args.reuse_template:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
   base_user_dn = re.sub("^uid={},".format(args.user),'',user_dn)
   logger.debug("base_user_dn: {}".format(base_user_dn))
   ldap_server = ldap3.Server(args.server, get_info=ldap3.ALL)
-  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True)
+  ldap_conn = ldap3.Connection(ldap_server,user=user_dn, password=args.password, auto_bind=True, collect_usage=True)
   users=get_users_ldap(args.reuse_template)
 else:  
   logger.info("Creating {} users".format(args.count))
