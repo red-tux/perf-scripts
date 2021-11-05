@@ -317,7 +317,7 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
     # print(user_dn_chunk)
 
     logger.perf("Chunk ({})".format(len(user_dn_chunk)))
-    logger.debug("Showing fist 20 of user_dn_chunk: ".format(user_dn_chunk[:20]))
+    logger.debug("Showing fist 20 of user_dn_chunk: {}".format(user_dn_chunk[:20]))
 
     # result = ldap_conn.modify(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
     result = ldap_modify_retry(group_dn,{"member":[(ldap_mod_op, user_dn_chunk)]})
