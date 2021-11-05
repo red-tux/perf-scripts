@@ -32,6 +32,8 @@ import logging
 import itertools
 import pprint
 import subprocess
+import socket
+import dns.resolver
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -328,6 +330,18 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
       time.sleep(args.delay)
 
 
+def check_dns_record(server, domain, record):
+    resolver = dns.resolver.Resolver()
+    resolver.nameservers=[socket.gethostbyname(server)]
+    try:
+        rdata = resolver.query(record + "." + domain)
+        logger.perf("Server [{}] answered with [{}]".format(server, rdata[0].address))
+        return 1
+    except dns.resolver.NXDOMAIN:
+        logger.perf("Record [{}] doesn't exist on server [{}]".format(record + "." + domain, server))
+        return 0
+
+
 parser = argparse.ArgumentParser(description="Generate load test data for IdM",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-v', dest='verbosity', action='count', default=0,
@@ -362,6 +376,8 @@ parser.add_argument('-l', dest='user_limit', type=int, default=-1,
                     help="Limit the number of users returned by reuse")
 parser.add_argument('--max-retries',dest='max_retries', type=int, default=0,
                     help="Maximum number of retries for a failed chunk operation")
+parser.add_argument('--check-repl', dest='check_repl',default=False,action='store_true',
+                    help="Check when replication is finished by adding a DNS record")
 
 args=parser.parse_args()
 
@@ -441,6 +457,10 @@ logger.perf('----')
 
 client = ClientMeta(args.server,False)
 client.login(args.user, args.password)
+dnszone = client.dnszone_find(o_forward_only=True)['result'][0]
+servers = dnszone['nsrecord']
+domain = dnszone['idnsname'][0]['__dns_name__']
+logger.info("Found servers: {} for domain: [{}]".format(servers, domain))
 
 if args.ldap_group or args.ldap_stage:
   user_dn=client.user_show(args.user,o_all=True)['result']['dn']
@@ -500,3 +520,25 @@ logger.perf("End Time: {}".format(datetime.now().strftime("%Y%m%d %H:%M")))
 run_time=time.time() - start_time
 logger.perf("Total Run Time: {:.3f}sec".format(run_time))
 logger.perf("Total Run time: {:d}min {:.3f}sec".format(int(run_time//60),run_time%60))
+
+if args.check_repl:
+    record = "trecord{}".format(randomizer)
+    client.dnsrecord_add(a_dnszoneidnsname=domain, a_idnsname=record, o_a_part_ip_address='1.1.1.1')
+    check_result = 0
+    itr_ctr = 0
+    while check_result < len(servers) and itr_ctr < 600:
+        time.sleep(1)
+        check_result = 0
+        logger.perf("---- Iteration [{}] ----".format(itr_ctr))
+
+        for server in servers:
+            check_result += check_dns_record(server, domain, record)
+
+        itr_ctr += 1
+
+
+    logger.perf('----')
+    logger.perf("End Time with replication: {}".format(datetime.now().strftime("%Y%m%d %H:%M")))
+    run_time=time.time() - start_time
+    logger.perf("Total Run Time with replication: {:.3f}sec".format(run_time))
+    logger.perf("Total Run time with replication: {:d}min {:.3f}sec".format(int(run_time//60),run_time%60))
