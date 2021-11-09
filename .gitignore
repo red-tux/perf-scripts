@@ -2,3 +2,4 @@
 perf_*
 log_*
 venv*
+RHDS/enable_audit_log_pipe.ldif
