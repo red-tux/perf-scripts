@@ -1,7 +1,7 @@
 dn: cn=config
 changetype: modify
 replace: nsslapd-auditlog
-nsslapd-auditlog: /var/log/dirsrv/slapd-instance/audit.pipe
+nsslapd-auditlog: /var/log/dirsrv/slapd-INSTANCE/audit.pipe
 -
 replace: nsslapd-auditlog-logbuffering
 nsslapd-auditlog-logbuffering: off
