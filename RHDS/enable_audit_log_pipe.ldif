@@ -1,0 +1,19 @@
+dn: cn=config
+changetype: modify
+replace: nsslapd-auditlog
+nsslapd-auditlog: /var/log/dirsrv/slapd-instance/audit.pipe
+-
+replace: nsslapd-auditlog-logbuffering
+nsslapd-auditlog-logbuffering: off
+-
+replace: nsslapd-auditlog-maxlogsperdir
+nsslapd-auditlog-maxlogsperdir: 1
+-
+replace: nsslapd-auditlog-logexpirationtime
+nsslapd-auditlog-logexpirationtime: -1
+-
+replace: nsslapd-auditlog-logrotationtime
+nsslapd-auditlog-logrotationtime: -1
+-
+replace: nsslapd-auditlog-logging-enabled
+nsslapd-auditlog-logging-enabled: on

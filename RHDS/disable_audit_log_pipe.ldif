@@ -1,0 +1,4 @@
+dn: cn=config
+changetype: modify
+replace: nsslapd-auditlog-logging-enabled
+nsslapd-auditlog-logging-enabled: off
