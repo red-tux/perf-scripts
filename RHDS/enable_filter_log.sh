@@ -10,12 +10,12 @@ LDAP_MOD_ACT="cn=Directory Manager"
 echo "Please enter the password for the LDAP user: '$LDAP_MOD_ACT'"
 
 stty -echo
-read -p "Password: " PASSOWRD
+read -p "Password: " PASSWORD
 stty echo
 echo
 
 echo "Enabeling auditlog"
-cat << 'EOF' | ldapmodify -D "$LDAP_MOD_ACT" -w "$PASSWORD"
+ldapmodify -D "$LDAP_MOD_ACT" -w "$PASSWORD" <<EOF
 dn: cn=config
 changetype: modify
 replace: nsslapd-auditlog
