@@ -4,5 +4,4 @@ perf_*
 log_*
 venv*
 RHDS/enable_audit_log_pipe.ldif
-RHDS/run_filter_log.sh
 RHDS/audit_out
