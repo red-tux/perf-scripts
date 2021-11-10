@@ -311,7 +311,7 @@ def mod_group_users_ldap(users, ldap_conn, base_user_dn, group_dn, ldap_mod_op, 
   if chunk==-1:
     chunk=len(users)
 
-  user_dn_list = ["uid={},{}".format(user,base_user_dn) for user in users]
+  user_dn_list = [base_user_dn.format(user) for user in users]
 
   for user_dn_chunk in chunker(user_dn_list,chunk):
     # print(user_dn_chunk)
