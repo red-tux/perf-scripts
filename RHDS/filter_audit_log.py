@@ -78,7 +78,8 @@ def plugin(line):
       # m_dn = any(r_dn.match(l) for l in entry)
       if dn_match:
         print("Matched DN: {} {:4d} {}".format(ent_time,len(entry),dn))
-        logf.write("\n".join(entry) + "\n")
+        logf.write("\n".join(entry))
+        logf.write('\n\n')
         logf.flush()
       else:
         print(" Unmatched: {} {:4d} {}".format(ent_time,len(entry),dn))
