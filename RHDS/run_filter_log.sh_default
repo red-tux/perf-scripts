@@ -1,0 +1,46 @@
+#!/bin/bash
+
+declare -A OPTIONS
+# Set these variables as needed
+INSTANCE=$(hostname -d | tr [a-z] [A-Z] | tr . -)
+PLUGIN="/path/to/plugin.py"
+OPTIONS[logfile]="/path/to/my/output/file"
+OPTIONS[basedn]="dc=example,dc=com"
+
+# The acocunt to use to perform the ldap modify operation
+LDAP_MOD_ACT="cn=Directory Manager"
+
+# Uncomment the follwoing to show all lines as received
+# OPTIONS[follow]="yes"
+
+function stop_logging {
+  echo "Stopping logging pipe"
+  ldapmodify -f disable_audit_log_pipe.ldif -D $LDAP_MOD_ACT -w $PASSOWRD
+}
+
+trap stop_logging EXIT
+
+echo "Please enter the password for the LDAP user: '$LDAP_MOD_ACT'"
+
+stty -echo
+read -p "Password: " PASSOWRD
+stty echo
+echo
+
+echo "Starting ds-logpie.py in background"
+
+PLUG_OPTS=""
+BASE_NAME="$(basename -s .py $PLUGIN)"
+for key in "${OPTIONS[@]}"; do
+  PLUG_OPTS="$PLUG_OPTS $BASENAME.$key=${OPTIONS[$key]}"
+
+echo "OPTIONS: $PLUG_OPTS"
+
+ds-logpipe.py /var/log/dirsrv/slapd-$INSTANCE/audit.pipe -s /var/run/dirsrv/slapd-$INSTANCE.pid -p $PLUGIN $PLUG_OPTS &
+
+echo "Loading LDIF to start logging"
+ldapmodify -f enable_audit_log_pipe.ldif -D $LDAP_MOD_ACT -w $PASSOWRD
+
+echo "Foregrounding ds-logpipe.py"
+
+fg
