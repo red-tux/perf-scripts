@@ -1,29 +1,39 @@
-Filters for ds-logpipe.py
+# Filters for ds-logpipe.py
+
+1. [Audit log filter](audit_filter)
+
+## Audit log filter <a name="audit_filter"></a>
 
 filter_audit_log.py  - script for filtering audit logs
+
 enable_filter_log.sh - script to enable audit logging to a pipe
+
 disable_filter_log.sh - script to disable audit logging
 
 To run, use the following order of operations, you will need two terminals open, referred to herein as T1 and T2 in the prompt shown
 
-Start the named pipe logger.  This will pass two parameters to the logging plugin, the output file (audit_out) and the DN to use as a base filter (everything under that DN is returned)
+### Starting the audit filter
+
+* Start the named pipe logger.  This will pass two parameters to the logging plugin, the output file (audit_out) and the DN to use as a base filter (everything under that DN is returned)
 ```
 T1 $ ./run_filter_log.sh filter_audit_log.py audit_out "idnsname=example.com.,cn=dns,dc=example,dc=com"
 ```
 
-Enable the named pipe
+* Enable the named pipe
 ```
 T2 $ ./enable_filter_log.sh
 ```
 
+### Stopping the audit filter
 
-When finished:
+* When finished:
 ```
 T2 $ ./disable_filter_log.sh
 ```
 
-You may now stop the filter on Terminal 1
+* You may now stop the filter on Terminal 1
 
+Note:<br />
 If at any time the directory server appears to be hung you may need to "cat" the named pipe multiple times to clear it.
 
 
