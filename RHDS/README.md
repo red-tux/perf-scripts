@@ -7,14 +7,20 @@ disable_filter_log.sh - script to disable audit logging
 To run, use the following order of operations, you will need two terminals open, referred to herein as T1 and T2 in the prompt shown
 
 Start the named pipe logger.  This will pass two parameters to the logging plugin, the output file (audit_out) and the DN to use as a base filter (everything under that DN is returned)
-`T1 $ ./run_filter_log.sh filter_audit_log.py audit_out "idnsname=example.com.,cn=dns,dc=example,dc=com"`
+```
+T1 $ ./run_filter_log.sh filter_audit_log.py audit_out "idnsname=example.com.,cn=dns,dc=example,dc=com"
+```
 
 Enable the named pipe
-`T2 $ ./enable_filter_log.sh`
+```
+T2 $ ./enable_filter_log.sh
+```
 
 
 When finished:
-`T2 $ ./disable_filter_log.sh`
+```
+T2 $ ./disable_filter_log.sh
+```
 
 You may now stop the filter on Terminal 1
 
