@@ -12,8 +12,7 @@
 #
 # Update pip and then install needed libary
 # (user-venv3)$ pip install --upgrade pip
-# (user-venv3)$ pip install python-freeipa
-# (user-venv3)$ pip install ldap3
+# (user-venv3)$ pip install -r requirements.txt
 #
 # Execute Script:
 # (user-venv3)$ ./load_test.py -h
